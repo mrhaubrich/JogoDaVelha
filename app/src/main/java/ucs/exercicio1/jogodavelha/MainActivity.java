@@ -1,13 +1,9 @@
 package ucs.exercicio1.jogodavelha;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
-
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -15,8 +11,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 public class MainActivity extends AppCompatActivity {
     static final int REQUEST_IMAGE_CAPTURE_JOGADOR1 = 1;
@@ -165,7 +162,12 @@ public class MainActivity extends AppCompatActivity {
                     tabuleiro[finalI][finalJ] = currentPlayer;
                     //Log.d("tabuleiro", "tabuleiro: ");
                     if(ganhador(view)){
-                        abreActivityGanhador();
+                        abreActivityGanhador(false);
+                        clear();
+                        return;
+                    }
+                    if(isVelha()){
+                        abreActivityGanhador(true);
                         clear();
                         return;
                     }
@@ -198,9 +200,9 @@ public class MainActivity extends AppCompatActivity {
     private void alternarPlayer(){
         currentPlayer = currentPlayer == 1 ? 2 : 1;
     }
-    private void abreActivityGanhador(){
+    private void abreActivityGanhador(boolean pVelha){
         Intent winnerIntent = new Intent(this, WinnerActivity.class);
-        String winner = "Jogador " + currentPlayer;
+        String winner = !pVelha ? "Jogador " + currentPlayer : "Deu velha!";
         winnerIntent.putExtra("vencedor", winner);
         startActivity(winnerIntent);
     }
@@ -218,6 +220,14 @@ public class MainActivity extends AppCompatActivity {
         }
         btnJogador1.setImageResource(R.drawable.jogador1);
         btnJogador2.setImageResource(R.drawable.jogador2_btn_foreground);
+    }
+    private boolean isVelha(){
+        for(int i = 0; i < 3 ; i++){
+            for(int j = 0; j < 3 ; j++){
+                if(tabuleiro[i][j] == 0) return false;
+            }
+        }
+        return true;
     }
     //endregion
 }
