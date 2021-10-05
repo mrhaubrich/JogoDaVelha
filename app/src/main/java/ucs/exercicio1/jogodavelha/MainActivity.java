@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -11,13 +12,16 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityOptionsCompat;
 
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
-    static final int REQUEST_IMAGE_CAPTURE_JOGADOR1 = 1;
-    static final int REQUEST_IMAGE_CAPTURE_JOGADOR2 = 2;
     int currentPlayer = 1;
     ImageButton[][] positionMatrix = new ImageButton[3][3];
     int[][] tabuleiro = new int[3][3];
@@ -32,28 +36,38 @@ public class MainActivity extends AppCompatActivity {
         instanciaElementos();
 
     }
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode){
-            case REQUEST_IMAGE_CAPTURE_JOGADOR1:
-                Log.i("TAG", "onActivityResult: JOGADOR1");
-                if (resultCode == RESULT_OK) {
-                    Bundle extras = data.getExtras();
-                    Bitmap imageBitmap = (Bitmap) extras.get("data");
-                    btnJogador1.setImageBitmap(imageBitmap);
+    ActivityResultLauncher<Intent> cameraP1Launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    assert result.getData() != null;
+                    int resultCode = result.getResultCode();
+                    Intent data = result.getData();
+                    Log.i("TAG", "onActivityResult: JOGADOR1");
+                    if (resultCode == RESULT_OK) {
+                        Bundle extras = data.getExtras();
+                        Bitmap imageBitmap = (Bitmap) extras.get("data");
+                        btnJogador1.setImageBitmap(imageBitmap);
+                    }
                 }
-                break;
-            case REQUEST_IMAGE_CAPTURE_JOGADOR2:
-                Log.i("TAG", "onActivityResult: JOGADOR2");
-                if (resultCode == RESULT_OK) {
-                    Bundle extras = data.getExtras();
-                    Bitmap imageBitmap = (Bitmap) extras.get("data");
-                    btnJogador2.setImageBitmap(imageBitmap);
+            });
+    ActivityResultLauncher<Intent> cameraP2Launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    assert result.getData() != null;
+                    int resultCode = result.getResultCode();
+                    Intent data = result.getData();
+                    Log.i("TAG", "onActivityResult: JOGADOR2");
+                    if (resultCode == RESULT_OK) {
+                        Bundle extras = data.getExtras();
+                        Bitmap imageBitmap = (Bitmap) extras.get("data");
+                        btnJogador2.setImageBitmap(imageBitmap);
+                    }
                 }
-                break;
-        }
-    }
+            });
+
+
     //region Métodos criados
     private int[] getImageButtonPositionOnMatrix(ImageButton imgBtn){
         for(int i = 0 ; i < 3 ; i++){
@@ -183,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
         btnJogador1.setOnClickListener(view -> {
             // if imagem não existe abre camera else inicia jogo
             if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE_JOGADOR1);
+                cameraP1Launcher.launch(cameraIntent);
                 return;
             }
             requestPermissions(new String[]{Manifest.permission.CAMERA}, 666);
@@ -191,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
         btnJogador2.setOnClickListener(view -> {
             // if imagem não existe abre camera else inicia jogo
             if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE_JOGADOR2);
+                cameraP2Launcher.launch(cameraIntent);
                 return;
             }
             requestPermissions(new String[]{Manifest.permission.CAMERA}, 666);
