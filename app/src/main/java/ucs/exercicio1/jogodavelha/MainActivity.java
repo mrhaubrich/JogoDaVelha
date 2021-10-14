@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -339,11 +340,24 @@ public class MainActivity extends AppCompatActivity {
     private void setPic(ImageButton btnJogador, int player) throws IOException {
         String currentPhotoPath = player == PLAYER_1 ? currentPhotoPathPlayer1 : currentPhotoPathPlayer2;
         Log.i("path", "path: " + currentPhotoPath);
-        // Get the dimensions of the View
-        int targetW = btnJogador.getWidth();
-        int targetH = btnJogador.getHeight();
 
-        // Get the dimensions of the bitmap
+        int targetW = btnJogador.getMaxWidth();
+        int targetH = btnJogador.getMaxHeight();
+        ExifInterface ei = new ExifInterface(currentPhotoPath);
+        Bitmap original = BitmapFactory.decodeFile(currentPhotoPath);
+        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED);
+        original = cropBitmap(original);
+        original = rotateBitmap(original,orientation);
+
+        try (FileOutputStream out = new FileOutputStream(currentPhotoPath)) {
+            original.compress(Bitmap.CompressFormat.JPEG, 100, out);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+
         BitmapFactory.Options bmOptions = new BitmapFactory.Options();
         bmOptions.inJustDecodeBounds = true;
 
@@ -352,20 +366,14 @@ public class MainActivity extends AppCompatActivity {
         int photoW = bmOptions.outWidth;
         int photoH = bmOptions.outHeight;
 
-        // Determine how much to scale down the image
-        int scaleFactor = Math.max(1, Math.max(photoW/targetW, photoH/targetH));
 
-        // Decode the image file into a Bitmap sized to fill the View
+        double scaleFactor = Math.max(1, Math.min((double) photoW/targetW, (double) photoH/targetH));
+
         bmOptions.inJustDecodeBounds = false;
-        bmOptions.inSampleSize = scaleFactor;
+        bmOptions.inSampleSize = (int)scaleFactor;
         bmOptions.inPurgeable = true;
 
-        ExifInterface ei = new ExifInterface(currentPhotoPath);
-        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION,
-                ExifInterface.ORIENTATION_UNDEFINED);
         Bitmap bitmap = BitmapFactory.decodeFile(currentPhotoPath, bmOptions);
-        bitmap = cropBitmap(bitmap);
-        bitmap = rotateBitmap(bitmap,orientation);
         if(player == PLAYER_1) bmpPlayer1 = bitmap;
         else bmpPlayer2 = bitmap;
         btnJogador.setImageBitmap(bitmap);
@@ -374,6 +382,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Bitmap cropBitmap(Bitmap srcBmp){
         Bitmap dstBmp;
+
         if (srcBmp.getWidth() >= srcBmp.getHeight()){
 
             dstBmp = Bitmap.createBitmap(
