@@ -103,7 +103,6 @@
                 android:layout_height="120dp"
                 android:backgroundTint="#5E5C5C"
                 app:srcCompat="@drawable/jogador1"
-                app:tint="#FFFFFF"
                 android:contentDescription="@string/jogador1" />
 
             <ImageButton
@@ -112,7 +111,6 @@
                 android:layout_height="120dp"
                 android:backgroundTint="#5E5C5C"
                 app:srcCompat="@drawable/jogador2_btn_foreground"
-                app:tint="#FFFFFF"
                 android:contentDescription="@string/jogador2" />
 
 
