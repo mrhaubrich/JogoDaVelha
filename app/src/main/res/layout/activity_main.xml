@@ -99,8 +99,8 @@
             <ImageButton
                 android:layout_marginStart="10dp"
                 android:id="@+id/imgPlayer1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:backgroundTint="#5E5C5C"
                 app:srcCompat="@drawable/jogador1"
                 app:tint="#FFFFFF"
@@ -108,8 +108,8 @@
 
             <ImageButton
                 android:id="@+id/imgPlayer2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:backgroundTint="#5E5C5C"
                 app:srcCompat="@drawable/jogador2_btn_foreground"
                 app:tint="#FFFFFF"
@@ -119,8 +119,8 @@
             <Button
                 android:layout_marginLeft="4dp"
                 android:id="@+id/btnClear"
-                android:layout_width="123dp"
-                android:layout_height="match_parent"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:backgroundTint="#5E5C5C"
                 android:text="@string/clear"
                 android:textColor="#FFFFFF"

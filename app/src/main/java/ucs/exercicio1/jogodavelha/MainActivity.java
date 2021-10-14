@@ -1,74 +1,182 @@
 package ucs.exercicio1.jogodavelha;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityOptionsCompat;
+import androidx.core.content.FileProvider;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
+    static final int REQUEST_IMAGE_CAPTURE_PLAYER_1 = 1;
+    static final int REQUEST_IMAGE_CAPTURE_PLAYER_2 = 2;
+    String currentPhotoPathPlayer1, currentPhotoPathPlayer2;
     int currentPlayer = 1;
     ImageButton[][] positionMatrix = new ImageButton[3][3];
     int[][] tabuleiro = new int[3][3];
     Button btnClear;
     ImageButton btnJogador1, btnJogador2;
     int[] imageButtonPositionOnMatrix = null;
+    File file;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         btnClear = findViewById(R.id.btnClear);
+        file = new File(getFilesDir(), "picFromCamera" + ".jpg");
         instanciaElementos();
-
+        requestPermissions(new String[]{Manifest.permission.CAMERA,Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE},666);
     }
-    ActivityResultLauncher<Intent> cameraP1Launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-            new ActivityResultCallback<ActivityResult>() {
-                @Override
-                public void onActivityResult(ActivityResult result) {
-                    assert result.getData() != null;
-                    int resultCode = result.getResultCode();
-                    Intent data = result.getData();
-                    Log.i("TAG", "onActivityResult: JOGADOR1");
-                    if (resultCode == RESULT_OK) {
-                        Bundle extras = data.getExtras();
-                        Bitmap imageBitmap = (Bitmap) extras.get("data");
-                        btnJogador1.setImageBitmap(imageBitmap);
-                    }
-                }
-            });
-    ActivityResultLauncher<Intent> cameraP2Launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-            new ActivityResultCallback<ActivityResult>() {
-                @Override
-                public void onActivityResult(ActivityResult result) {
-                    assert result.getData() != null;
-                    int resultCode = result.getResultCode();
-                    Intent data = result.getData();
-                    Log.i("TAG", "onActivityResult: JOGADOR2");
-                    if (resultCode == RESULT_OK) {
-                        Bundle extras = data.getExtras();
-                        Bitmap imageBitmap = (Bitmap) extras.get("data");
-                        btnJogador2.setImageBitmap(imageBitmap);
-                    }
-                }
-            });
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(resultCode != RESULT_OK) return;
+        switch (requestCode){
+            case REQUEST_IMAGE_CAPTURE_PLAYER_1:
+                galleryAddPic(REQUEST_IMAGE_CAPTURE_PLAYER_1);
+                setPic(btnJogador1, REQUEST_IMAGE_CAPTURE_PLAYER_1);
+                break;
+            case REQUEST_IMAGE_CAPTURE_PLAYER_2:
+                galleryAddPic(REQUEST_IMAGE_CAPTURE_PLAYER_2);
+                Toast.makeText(this.getApplicationContext(),"Path: " + currentPhotoPathPlayer2,Toast.LENGTH_LONG).show();
+                setPic(btnJogador2, REQUEST_IMAGE_CAPTURE_PLAYER_2);
+                break;
+            default:
+                Toast.makeText(this, "Failed To Capture Image", Toast.LENGTH_SHORT).show();
+                break;
+        }
+    }
+
+
 
 
     //region Métodos criados
+
+    //region Instanciar
+
+    private void instanciaElementos() {
+        btnClear.setOnClickListener(view -> clear());
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                // region Somador para pegar posicao
+                int somador;
+                switch (i) {
+                    case 0:
+                        somador = i + j;
+                        break;
+                    case 1:
+                        somador = i + j + 2;
+                        break;
+                    case 2:
+                        somador = i + j + 4;
+                        break;
+                    default:
+                        somador = 0;
+                }
+                // endregion
+                tabuleiro[i][j] = 0;
+                // pega o id do xml
+                String positionID = "imgPos" + somador;
+                int resID = getResources().getIdentifier(positionID, "id", getPackageName());
+                // coloca no array
+                positionMatrix[i][j] = findViewById(resID);
+                String text = "S" + somador;
+                // cria o listener de click
+                int finalI = i;
+                int finalJ = j;
+                positionMatrix[i][j].setOnClickListener(view -> {
+                    // verificar ganhador();
+                    if (tabuleiro[finalI][finalJ] != 0) return;
+                    ImageButton position = (ImageButton) view;
+                    position.setImageResource(currentPlayer == 1 ? R.drawable.jogador1 : R.drawable.jogador2_btn_foreground);
+                    tabuleiro[finalI][finalJ] = currentPlayer;
+                    //Log.d("tabuleiro", "tabuleiro: ");
+                    if(ganhador(view)){
+                        abreActivityGanhador(false);
+                        clear();
+                        return;
+                    }
+                    if(isVelha()){
+                        abreActivityGanhador(true);
+                        clear();
+                        return;
+                    }
+                    imageButtonPositionOnMatrix = null;
+                    alternarPlayer();
+                });
+            }
+        }
+        btnJogador1 = findViewById(R.id.imgPlayer1);
+        btnJogador2 = findViewById(R.id.imgPlayer2);
+
+
+        btnJogador1.setOnClickListener(view -> {
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE_SECURE);
+            // if imagem não existe abre camera else inicia jogo
+            cameraIntent.removeExtra(MediaStore.EXTRA_OUTPUT);
+            File photoFile = null;
+            try {
+                photoFile = createImageFile(REQUEST_IMAGE_CAPTURE_PLAYER_1);
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                Toast.makeText(this.getApplicationContext(),"Error creating file",Toast.LENGTH_LONG).show();
+            }
+            if (photoFile == null) return;
+            Uri photoURI = FileProvider.getUriForFile(this,
+                    "com.example.android.fileprovider",
+                    photoFile);
+            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+            try {
+                if(cameraIntent.resolveActivity(getPackageManager()) != null)
+                    startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE_PLAYER_1);
+            } catch (ActivityNotFoundException e) {
+                // display error state to the user
+            }
+        });
+        btnJogador2.setOnClickListener(view -> {
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE_SECURE);
+            // if imagem não existe abre camera else inicia jogo
+            cameraIntent.removeExtra(MediaStore.EXTRA_OUTPUT);
+            File photoFile = null;
+            try {
+                photoFile = createImageFile(REQUEST_IMAGE_CAPTURE_PLAYER_2);
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                Toast.makeText(this.getApplicationContext(),"Error creating file",Toast.LENGTH_LONG).show();
+            }
+            if (photoFile == null) return;
+            Uri photoURI = FileProvider.getUriForFile(this,
+                    "com.example.android.fileprovider",
+                    photoFile);
+            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+            try {
+                if(cameraIntent.resolveActivity(getPackageManager()) != null)
+                startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE_PLAYER_2);
+            } catch (ActivityNotFoundException e) {
+                // display error state to the user
+            }
+        });
+    }
+
+    //endregion
+
+    //region Gameplay
     private int[] getImageButtonPositionOnMatrix(ImageButton imgBtn){
         for(int i = 0 ; i < 3 ; i++){
             for(int j = 0 ; j < 3 ; j++){
@@ -138,79 +246,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean ganhador(View view){
         return verificaDiagonal((ImageButton) view) || verificaVertical((ImageButton) view) || verificaHorizontal((ImageButton) view);
     }
-    private void instanciaElementos() {
-        btnClear.setOnClickListener(view -> clear());
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                // region Somador para pegar posicao
-                int somador;
-                switch (i) {
-                    case 0:
-                        somador = i + j;
-                        break;
-                    case 1:
-                        somador = i + j + 2;
-                        break;
-                    case 2:
-                        somador = i + j + 4;
-                        break;
-                    default:
-                        somador = 0;
-                }
-                // endregion
-                tabuleiro[i][j] = 0;
-                // pega o id do xml
-                String positionID = "imgPos" + somador;
-                int resID = getResources().getIdentifier(positionID, "id", getPackageName());
-                // coloca no array
-                positionMatrix[i][j] = findViewById(resID);
-                String text = "S" + somador;
-                // cria o listener de click
-                int finalI = i;
-                int finalJ = j;
-                positionMatrix[i][j].setOnClickListener(view -> {
-                    // verificar ganhador();
-                    if (tabuleiro[finalI][finalJ] != 0) return;
-                    ImageButton position = (ImageButton) view;
-                    position.setImageResource(currentPlayer == 1 ? R.drawable.jogador1 : R.drawable.jogador2_btn_foreground);
-                    tabuleiro[finalI][finalJ] = currentPlayer;
-                    //Log.d("tabuleiro", "tabuleiro: ");
-                    if(ganhador(view)){
-                        abreActivityGanhador(false);
-                        clear();
-                        return;
-                    }
-                    if(isVelha()){
-                        abreActivityGanhador(true);
-                        clear();
-                        return;
-                    }
-                    imageButtonPositionOnMatrix = null;
-                    alternarPlayer();
-                });
-            }
-        }
-        btnJogador1 = findViewById(R.id.imgPlayer1);
-        btnJogador2 = findViewById(R.id.imgPlayer2);
-
-        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE_SECURE);
-        btnJogador1.setOnClickListener(view -> {
-            // if imagem não existe abre camera else inicia jogo
-            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                cameraP1Launcher.launch(cameraIntent);
-                return;
-            }
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, 666);
-        });
-        btnJogador2.setOnClickListener(view -> {
-            // if imagem não existe abre camera else inicia jogo
-            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                cameraP2Launcher.launch(cameraIntent);
-                return;
-            }
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, 666);
-        });
-    }
     private void alternarPlayer(){
         currentPlayer = currentPlayer == 1 ? 2 : 1;
     }
@@ -243,5 +278,65 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
+
+    //endregion
+
+    //region Arquivos
+
+
+    private void galleryAddPic(int player) {
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        File f = new File(player == REQUEST_IMAGE_CAPTURE_PLAYER_1 ? currentPhotoPathPlayer1 : currentPhotoPathPlayer2);
+        Uri contentUri = Uri.fromFile(f);
+        mediaScanIntent.setData(contentUri);
+        this.sendBroadcast(mediaScanIntent);
+    }
+
+    private void setPic(ImageButton btnJogador, int player) {
+        String currentPhotoPath = player == REQUEST_IMAGE_CAPTURE_PLAYER_1 ? currentPhotoPathPlayer1 : currentPhotoPathPlayer2;
+        Log.i("path", "path: " + currentPhotoPath);
+        // Get the dimensions of the View
+        int targetW = btnJogador.getWidth();
+        int targetH = btnJogador.getHeight();
+
+        // Get the dimensions of the bitmap
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = true;
+
+        BitmapFactory.decodeFile(currentPhotoPath, bmOptions);
+
+        int photoW = bmOptions.outWidth;
+        int photoH = bmOptions.outHeight;
+
+        // Determine how much to scale down the image
+        int scaleFactor = Math.max(1, Math.max(photoW/targetW, photoH/targetH));
+
+        // Decode the image file into a Bitmap sized to fill the View
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = scaleFactor;
+        bmOptions.inPurgeable = true;
+
+        Bitmap bitmap = BitmapFactory.decodeFile(currentPhotoPath, bmOptions);
+        btnJogador.setImageBitmap(bitmap);
+    }
+
+    private File createImageFile(int player) throws IOException {
+        // Create an image file name
+        String imageFileName = "Player" + player;
+
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = new File(storageDir, imageFileName + ".jpg");
+
+        // Save a file: path for use with ACTION_VIEW intents
+        if(player == REQUEST_IMAGE_CAPTURE_PLAYER_1)
+            currentPhotoPathPlayer1 = image.getAbsolutePath();
+        else
+            currentPhotoPathPlayer2 = image.getAbsolutePath();
+        return image;
+    }
+
+
+    //endregion
+
     //endregion
 }
