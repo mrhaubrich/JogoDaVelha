@@ -6,6 +6,12 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.PointF;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -15,18 +21,25 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
+import android.media.FaceDetector;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
     static final int REQUEST_IMAGE_CAPTURE_PLAYER_1 = 1;
     static final int REQUEST_IMAGE_CAPTURE_PLAYER_2 = 2;
+    static final int numberOfFaces = 1;
+    private FaceDetector myFaceDetect = null;
+    private FaceDetector.Face[] myFace = null;
+    float myEyesDistance;
+    int numberOfFaceDetected = 0;
     String currentPhotoPathPlayer1, currentPhotoPathPlayer2;
     int currentPlayer = 1;
     ImageButton[][] positionMatrix = new ImageButton[3][3];
@@ -51,12 +64,19 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode){
             case REQUEST_IMAGE_CAPTURE_PLAYER_1:
                 galleryAddPic(REQUEST_IMAGE_CAPTURE_PLAYER_1);
-                setPic(btnJogador1, REQUEST_IMAGE_CAPTURE_PLAYER_1);
+                try {
+                    setPic(btnJogador1, REQUEST_IMAGE_CAPTURE_PLAYER_1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             case REQUEST_IMAGE_CAPTURE_PLAYER_2:
                 galleryAddPic(REQUEST_IMAGE_CAPTURE_PLAYER_2);
-                Toast.makeText(this.getApplicationContext(),"Path: " + currentPhotoPathPlayer2,Toast.LENGTH_LONG).show();
-                setPic(btnJogador2, REQUEST_IMAGE_CAPTURE_PLAYER_2);
+                try {
+                    setPic(btnJogador2, REQUEST_IMAGE_CAPTURE_PLAYER_2);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 break;
             default:
                 Toast.makeText(this, "Failed To Capture Image", Toast.LENGTH_SHORT).show();
@@ -293,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
         this.sendBroadcast(mediaScanIntent);
     }
 
-    private void setPic(ImageButton btnJogador, int player) {
+    private void setPic(ImageButton btnJogador, int player) throws IOException {
         String currentPhotoPath = player == REQUEST_IMAGE_CAPTURE_PLAYER_1 ? currentPhotoPathPlayer1 : currentPhotoPathPlayer2;
         Log.i("path", "path: " + currentPhotoPath);
         // Get the dimensions of the View
@@ -317,8 +337,63 @@ public class MainActivity extends AppCompatActivity {
         bmOptions.inSampleSize = scaleFactor;
         bmOptions.inPurgeable = true;
 
+        ExifInterface ei = new ExifInterface(currentPhotoPath);
+        int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED);
         Bitmap bitmap = BitmapFactory.decodeFile(currentPhotoPath, bmOptions);
+        bitmap = cropBitmap(bitmap);
+        bitmap = rotateBitmap(bitmap,orientation);
         btnJogador.setImageBitmap(bitmap);
+    }
+
+    private Bitmap cropBitmap(Bitmap srcBmp){
+        Bitmap dstBmp;
+        if (srcBmp.getWidth() >= srcBmp.getHeight()){
+
+            dstBmp = Bitmap.createBitmap(
+                    srcBmp,
+                    srcBmp.getWidth()/2 - srcBmp.getHeight()/2,
+                    0,
+                    srcBmp.getHeight(),
+                    srcBmp.getHeight()
+            );
+
+        }else{
+
+            dstBmp = Bitmap.createBitmap(
+                    srcBmp,
+                    0,
+                    srcBmp.getHeight()/2 - srcBmp.getWidth()/2,
+                    srcBmp.getWidth(),
+                    srcBmp.getWidth()
+            );
+        }
+        return dstBmp;
+    }
+
+    private Bitmap rotateBitmap(Bitmap srcBmp, int pOrientation){
+        int orientation;
+        switch(pOrientation) {
+
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                orientation = 90;
+                break;
+
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                orientation = 180;
+                break;
+
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                orientation = 270;
+                break;
+
+            case ExifInterface.ORIENTATION_NORMAL:
+            default:
+                orientation = 0;
+        }
+        Matrix matrix = new Matrix();
+        matrix.postRotate(orientation);
+        return Bitmap.createBitmap(srcBmp, 0, 0, srcBmp.getWidth(), srcBmp.getHeight(), matrix, true);
     }
 
     private File createImageFile(int player) throws IOException {
