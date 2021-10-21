@@ -5,10 +5,12 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.drawable.Drawable;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
@@ -30,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     static final int PLAYER_2 = 2;
     Gameplay game = new Gameplay();
     Images img = new Images();
+    Drawable[][] originalBackground = new Drawable[3][3];
 //    static final int numberOfFaces = 1;
 //    private FaceDetector myFaceDetect = null;
 //    private FaceDetector.Face[] myFace = null;
@@ -152,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
                 int resID = getResources().getIdentifier(positionID, "id", getPackageName());
                 // coloca no array
                 positionMatrix[i][j] = findViewById(resID);
+                originalBackground[i][j] = positionMatrix[i][j].getBackground();
                 String text = "S" + somador;
                 // cria o listener de click
                 int finalI = i;
@@ -164,8 +168,12 @@ public class MainActivity extends AppCompatActivity {
                     game.setTabuleiroPosition(finalI, finalJ, false);
                     //Log.d("tabuleiro", "tabuleiro: ");
                     if(game.won(finalI, finalJ)){
-                        abreActivityGanhador(false);
-                        clear();
+                        if(!marcaWinningPlay()) return;
+                        Handler handler = new Handler();
+                        handler.postDelayed(()->{
+                            abreActivityGanhador(false);
+                            clear();
+                        }, 5000);
                         return;
                     }
                     if(game.isVelha()){
@@ -190,6 +198,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean marcaWinningPlay(){
+        int[][] winningPlay = game.getWinningPlay();
+        if(winningPlay == null) return false;
+        int i, j;
+
+        for(int x = 0; x < 3; x++){
+            i = winningPlay[x][0];
+            j = winningPlay[x][1];
+            positionMatrix[i][j].setBackgroundColor(getColor(R.color.green));
+        }
+        return true;
+    }
+
     private void abreActivityGanhador(boolean pVelha){
         Intent winnerIntent = new Intent(this, WinnerActivity.class);
         String winner = !pVelha ? "Jogador " + game.getCurrentPlayer() : "Deu velha!";
@@ -202,6 +223,7 @@ public class MainActivity extends AppCompatActivity {
         game.setCurrentPlayer(0);
         game.clearTabuleiro();
         game.setGameStarted(false);
+        game.clearTabuleiroBoolean();
         setTabuleiroEnabled(false);
         resetaImagens();
     }
@@ -209,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
         for(int i = 0; i < 3 ; i++){
             for(int j = 0; j < 3 ; j++){
                 positionMatrix[i][j].setImageResource(R.drawable.invisivel);
+                positionMatrix[i][j].setBackground(originalBackground[i][j]);
             }
         }
     }

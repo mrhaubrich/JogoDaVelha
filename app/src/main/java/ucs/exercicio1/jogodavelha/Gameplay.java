@@ -5,6 +5,12 @@ public class Gameplay {
     private int currentPlayer = 0;
     private int[][] tabuleiro = new int[3][3];
 
+    public boolean[][] getTabuleiroBoolean() {
+        return tabuleiroBoolean;
+    }
+
+    private boolean[][] tabuleiroBoolean = new boolean[3][3];
+
     public boolean isGameStarted() {
         return gameStarted;
     }
@@ -43,21 +49,48 @@ public class Gameplay {
         return true;
     }
 
+    public int[][] getWinningPlay(){
+        int[][] positions = new int[3][2];
+        int count = 0;
+        for(int i = 0; i < 3; i++){
+            for(int j = 0; j < 3; j++){
+                if(tabuleiroBoolean[i][j]){
+                    positions[count][0] = i;
+                    positions[count][1] = j;
+                    count++;
+                }
+            }
+        }
+        if(count < 3) return null;
+        return positions;
+    }
 
     public void alternarPlayer() {
         currentPlayer = currentPlayer == 1 ? 2 : 1;
     }
 
+    public void clearTabuleiroBoolean(){
+        tabuleiroBoolean = new boolean[3][3];
+    }
+
     private boolean verificaHorizontal(int i) {
         for (int j = 0; j < 3; j++) {
-            if (tabuleiro[i][j] != currentPlayer) return false;
+            if (tabuleiro[i][j] != currentPlayer) {
+                clearTabuleiroBoolean();
+                return false;
+            }
+            tabuleiroBoolean[i][j] = true;
         }
         return true;
     }
 
     private boolean verificaVertical(int j) {
         for (int i = 0; i < 3; i++) {
-            if (tabuleiro[i][j] != currentPlayer) return false;
+            if (tabuleiro[i][j] != currentPlayer) {
+                clearTabuleiroBoolean();
+                return false;
+            }
+            tabuleiroBoolean[i][j] = true;
         }
         return true;
     }
@@ -84,7 +117,11 @@ public class Gameplay {
     private boolean diagonalCrescente() {
         int j = 2;
         for (int i = 0; i < 3; i++) {
-            if (tabuleiro[i][j] != currentPlayer) return false;
+            if (tabuleiro[i][j] != currentPlayer) {
+                clearTabuleiroBoolean();
+                return false;
+            }
+            tabuleiroBoolean[i][j] = true;
             j--;
         }
         return true;
@@ -92,7 +129,11 @@ public class Gameplay {
 
     private boolean diagonalDecrescente() {
         for (int i = 0; i < 3; i++) {
-            if (tabuleiro[i][i] != currentPlayer) return false;
+            if (tabuleiro[i][i] != currentPlayer) {
+                clearTabuleiroBoolean();
+                return false;
+            }
+            tabuleiroBoolean[i][i] = true;
         }
         return true;
     }
