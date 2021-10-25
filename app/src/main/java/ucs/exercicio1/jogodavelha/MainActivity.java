@@ -100,8 +100,10 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(!game.isGameStarted()){
                     game.setCurrentPlayer(PLAYER_1);
+                    game.setGameStarted(true);
                     setTabuleiroEnabled(true);
                 }
+                habilitaDesabilitaPlayers(!game.isGameStarted());
             }
         });
         btnJogador2.setOnClickListener(view -> {
@@ -117,9 +119,11 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(!game.isGameStarted()){
                     game.setCurrentPlayer(PLAYER_2);
+                    game.setGameStarted(true);
                     setTabuleiroEnabled(true);
                 }
             }
+            habilitaDesabilitaPlayers(!game.isGameStarted());
         });
     }
 
@@ -211,6 +215,11 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    private void habilitaDesabilitaPlayers(boolean enabled){
+        btnJogador1.setEnabled(enabled);
+        btnJogador2.setEnabled(enabled);
+    }
+
     private void abreActivityGanhador(boolean pVelha){
         Intent winnerIntent = new Intent(this, WinnerActivity.class);
         String winner = !pVelha ? "Jogador " + game.getCurrentPlayer() : "Deu velha!";
@@ -225,6 +234,7 @@ public class MainActivity extends AppCompatActivity {
         game.setGameStarted(false);
         game.clearTabuleiroBoolean();
         setTabuleiroEnabled(false);
+        habilitaDesabilitaPlayers(true);
         resetaImagens();
     }
     private void resetaImagens(){
