@@ -174,7 +174,9 @@ public class MainActivity extends AppCompatActivity {
                     if(game.won(finalI, finalJ)){
                         if(!marcaWinningPlay()) return;
                         Handler handler = new Handler();
+                        habilitaDesabilitaTodos(false);
                         handler.postDelayed(()->{
+                            habilitaDesabilitaTodos(true);
                             abreActivityGanhador(false);
                             clear();
                         }, 5000);
@@ -218,6 +220,12 @@ public class MainActivity extends AppCompatActivity {
     private void habilitaDesabilitaPlayers(boolean enabled){
         btnJogador1.setEnabled(enabled);
         btnJogador2.setEnabled(enabled);
+    }
+
+    private void habilitaDesabilitaTodos(boolean enabled){
+        habilitaDesabilitaPlayers(enabled);
+        setTabuleiroEnabled(enabled);
+        btnClear.setEnabled(enabled);
     }
 
     private void abreActivityGanhador(boolean pVelha){
