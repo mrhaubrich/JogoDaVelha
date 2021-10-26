@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
                             habilitaDesabilitaTodos(true);
                             abreActivityGanhador(false);
                             clear();
-                        }, 5000);
+                        }, 3000);
                         return;
                     }
                     if(game.isVelha()){
